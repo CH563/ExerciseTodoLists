@@ -10,7 +10,7 @@
                 <FormItem prop="todo">
                     <Input
                         v-model.trim="form.todo"
-                        placeholder="Enter todo..."
+                        placeholder="添加todo任务..."
                         style="width: 420px"
                         :maxlength="50"
                         size="large"
@@ -27,9 +27,24 @@
             </Form>
         </div>
         <div class="content">
+            <div class="tool">
+                <Input
+                    v-model.trim="search"
+                    placeholder="输入关键字搜索"
+                    style="width: 240px; margin-right: 15px"
+                />
+                <Select
+                    v-model="status"
+                    style="width:120px"
+                >
+                <Option :value="-1">全部</Option>
+                <Option :value="0">待完成</Option>
+                <Option :value="1">已完成</Option>
+            </Select>
+            </div>
             <flex-table
                 :columns="columns"
-                :data="lists"
+                :data="filterList"
             >
                 <template slot-scope="{row, index}" slot="operation">
                     <Button
@@ -52,13 +67,10 @@
 </template>
 <script>
 import dayjs from 'dayjs'
-import relativeTime from 'dayjs/plugin/relativeTime'
 import {
     localSave,
     localRead
 } from './util'
-
-dayjs.extend(relativeTime)
 
 const TODO_LIST_DATA = 'todoListData'
 
@@ -72,6 +84,8 @@ export default {
             }
         }
         return {
+            search: '',
+            status: -1,
             form: {
                 todo: ''
             },
@@ -95,9 +109,9 @@ export default {
                     key: 'status',
                     width: 150,
                     render: (h, params) => {
-                        const { status, finishDate } = params.row
+                        const { status } = params.row
                         const color = status ? 'success' : 'default'
-                        const text = status ? `已完成 ${finishDate}` : '待完成'
+                        const text = status ? `已完成` : '待完成'
                         return h('Tag', {
                             props: {
                                 color
@@ -125,6 +139,16 @@ export default {
             localSave(TODO_LIST_DATA, JSON.stringify(value))
         }
     },
+    computed: {
+        filterList () {
+            return this.lists.filter(item => {
+                const searchVal = this.search.toLowerCase()
+                const titleVal = item.title.toLowerCase()
+                const isStatus = this.status > -1 ? (item.status === this.status) : true
+                return titleVal.indexOf(searchVal) > -1 && isStatus
+            })
+        }
+    },
     methods: {
         getData () {
             const data = localRead(TODO_LIST_DATA)
@@ -148,9 +172,8 @@ export default {
             })
         },
         finish (index) {
-            const { startDate } = this.lists[index]
             this.lists[index].status = 1
-            this.lists[index].finishDate = dayjs(startDate).fromNow()
+            this.lists[index].finishDate = dayjs().format('YYYY-MM-DD HH:mm:ss')
             localSave(TODO_LIST_DATA, JSON.stringify(this.lists))
         },
         deleteItem (row, index) {
@@ -181,6 +204,9 @@ export default {
     vertical-align: middle;
     margin: 0 5px;
     color: #999;
+}
+.tool{
+    padding-bottom: 15px;
 }
 .content{
     padding: 15px 50px;
